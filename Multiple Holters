@@ -1,0 +1,93 @@
+import os
+import pandas as pd
+from PyPDF2 import PdfReader
+import re
+import numpy as np
+
+def extract_information(pdf_path):
+    with open(pdf_path, 'rb') as file:
+        pdf = PdfReader(file)
+        page = pdf.pages[0]
+        text = page.extract_text()
+
+        name = patient_id = gender = max_hr = mean_hr = min_hr = normal_beats = sve_beats = paced_beats = np.nan
+
+        try:
+            # Extract Surname, Firstname
+            name_search = re.search(r'Barts Health Centre (\w+, \w+)', text)
+            if name_search is not None:
+                name = name_search.group(1)
+        except Exception as e:
+            print(f"Error extracting name from file {pdf_path}: {e}")
+
+        try:
+            # Extract Patient ID
+            patient_id_search = re.search(r'Patient ID: (\d+)', text)
+            if patient_id_search is not None:
+                patient_id = patient_id_search.group(1)
+        except Exception as e:
+            print(f"Error extracting patient ID from file {pdf_path}: {e}")
+
+        try:
+            # Extract Gender
+            gender_search = re.search(r'Gender: (\w+)', text)
+            if gender_search is not None:
+                gender = gender_search.group(1)
+        except Exception as e:
+            print(f"Error extracting gender from file {pdf_path}: {e}")
+
+        try:
+            # Extract Heart Rates
+            max_hr_search = re.search(r'Max HR\s+(\d+)', text)
+            if max_hr_search is not None:
+                max_hr = max_hr_search.group(1)
+            mean_hr_search = re.search(r'Mean HR\s+(\d+)', text)
+            if mean_hr_search is not None:
+                mean_hr = mean_hr_search.group(1)
+            min_hr_search = re.search(r'Min HR\s+(\d+)', text)
+            if min_hr_search is not None:
+                min_hr = min_hr_search.group(1)
+        except Exception as e:
+            print(f"Error extracting heart rates from file {pdf_path}: {e}")
+
+        try:
+            # Extract Beat Counts
+            normal_beats_search = re.search(r'Normal VE Beats SVE Beats Paced Beats\nCount (\d+,\d+)', text)
+            if normal_beats_search is not None:
+                normal_beats = normal_beats_search.group(1)
+            sve_beats_search = re.search(r'Normal VE Beats SVE Beats Paced Beats\nCount \d+,\d+ Count (\d+)', text)
+            if sve_beats_search is not None:
+                sve_beats = sve_beats_search.group(1)
+            paced_beats_search = re.search(r'Normal VE Beats SVE Beats Paced Beats\nCount \d+,\d+ Count \d+ Count (\d+)', text)
+            if paced_beats_search is not None:
+                paced_beats = paced_beats_search.group(1)
+        except Exception as e:
+            print(f"Error extracting beat counts from file {pdf_path}: {e}")
+
+        # Create a DataFrame with extracted information
+        data = pd.DataFrame({
+            "Name": [name],
+            "Patient ID": [patient_id],
+            "Gender": [gender],
+            "Max HR": [max_hr],
+            "Mean HR": [mean_hr],
+            "Min HR": [min_hr],
+            "Normal VE Beats": [normal_beats],
+            "SVE Beats": [sve_beats],
+            "Paced Beats": [paced_beats],
+            "Filename": [pdf_path]  # add the filename to the dataframe
+        })
+        return data
+
+# Create an empty DataFrame to store results
+df = pd.DataFrame()
+
+# Get a list of all pdf files in the current working directory
+pdf_files = [file for file in os.listdir() if file.endswith('.pdf')]
+
+# Loop through the pdf files and apply the function to each
+for file in pdf_files:
+    df = df.append(extract_information(file), ignore_index=True)
+
+# Export the DataFrame to a .csv file on your desktop
+df.to_csv("[OutputCSV].csv", index=False)
