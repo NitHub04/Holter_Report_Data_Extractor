@@ -1,0 +1,74 @@
+
+import re
+import pandas as pd
+# pip install PyPDF2
+from PyPDF2 import PdfReader
+
+def extract_information(pdf_path):
+    with open(pdf_path, 'rb') as file:
+        pdf = PdfReader(file)
+        page = pdf.pages[0]
+        text = page.extract_text()
+        
+        # Initialize all values as None
+        name = patient_id = gender = max_hr = mean_hr = min_hr = normal_beats = sve_beats = paced_beats = None
+        
+        try:
+            # Extract Surname, Firstname
+            name_search = re.search(r'Barts Health Centre (\w+, \w+)', text)
+            if name_search is not None:
+                name = name_search.group(1)
+                print(f"Name: {name}")  k
+            else:
+                print("Unable to find name.")
+        except Exception as e:
+            print(f"Error extracting name: {e}")
+        
+        try:
+            # Extract Patient ID
+            patient_id = re.search(r'Patient ID: (\d+)', text).group(1)
+        except Exception as e:
+            print(f"Error extracting patient ID: {e}")
+        
+        try:
+            # Extract Gender
+            gender = re.search(r'Gender: (\w+)', text).group(1)
+        except Exception as e:
+            print(f"Error extracting gender: {e}")
+        
+        try:
+            # Extract Heart Rates
+            max_hr = re.search(r'Max HR\s+(\d+)', text).group(1)
+            mean_hr = re.search(r'Mean HR\s+(\d+)', text).group(1)
+            min_hr = re.search(r'Min HR\s+(\d+)', text).group(1)
+        except Exception as e:
+            print(f"Error extracting heart rates: {e}")
+        
+        try:
+            # Extract Beat Counts
+            normal_beats = re.search(r'Normal VE Beats SVE Beats Paced Beats\nCount (\d+,\d+)', text).group(1)
+            sve_beats = re.search(r'Normal VE Beats SVE Beats Paced Beats\nCount \d+,\d+ Count (\d+)', text).group(1)
+            paced_beats = re.search(r'Normal VE Beats SVE Beats Paced Beats\nCount \d+,\d+ Count \d+ Count (\d+)', text).group(1)
+        except Exception as e:
+            print(f"Error extracting beat counts: {e}")
+        
+        # Create a DataFrame with extracted information
+        data = pd.DataFrame({
+            "Name": [name],
+            "Patient ID": [patient_id],
+            "Gender": [gender],
+            "Max HR": [max_hr],
+            "Mean HR": [mean_hr],
+            "Min HR": [min_hr],
+            "Normal VE Beats": [normal_beats],
+            "SVE Beats": [sve_beats],
+            "Paced Beats": [paced_beats]
+        })
+        
+        return data
+
+
+pdf_path = "[Filename].pdf"
+df = extract_information(pdf_path)
+print(df)
+
